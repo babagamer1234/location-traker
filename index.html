@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Live Location Tracker</title>
+<title>Multi-User Live Tracker</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 <style>
   html, body { height: 100%; margin: 0; padding: 0; }
@@ -21,7 +21,7 @@
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <script>
-  // 🔹 Firebase config
+  // Firebase config
   const firebaseConfig = {
     apiKey: "AIzaSyA5iHHWvOKZnKlZCZz57O8ALtSkfNdMmrE",
     authDomain: "live-tracker-554a7.firebaseapp.com",
@@ -36,22 +36,32 @@
   const db = firebase.database();
 
   // Leaflet map
-  const map = L.map('map').setView([29.35166, 76.49581], 15);
+  const map = L.map('map').setView([29.35, 76.49], 13);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; OpenStreetMap contributors'
   }).addTo(map);
 
-  // Marker
-  const marker = L.marker([29.35166, 76.49581]).addTo(map);
+  // Object to hold markers for each user
+  const markers = {};
 
-  // Firebase listener for live location
-  db.ref("liveLocation").on("value", snapshot => {
-    const data = snapshot.val();
-    if(data){
-      const lat = data.latitude;
-      const lng = data.longitude;
-      marker.setLatLng([lat, lng]);
-      map.setView([lat, lng]);
+  // Listen to all users
+  db.ref("users").on("value", snapshot => {
+    const users = snapshot.val();
+    if(users){
+      for(const uid in users){
+        const user = users[uid];
+        const lat = user.latitude;
+        const lng = user.longitude;
+        const name = user.name || uid;
+
+        if(markers[uid]){
+          // update existing marker
+          markers[uid].setLatLng([lat, lng]);
+        } else {
+          // create new marker
+          markers[uid] = L.marker([lat, lng]).addTo(map).bindPopup(name);
+        }
+      }
     }
   });
 </script>
