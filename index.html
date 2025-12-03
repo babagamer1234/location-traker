@@ -1,27 +1,85 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Multi-User Live Tracker</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
-<style>
-  html, body { height: 100%; margin: 0; padding: 0; }
-  #map { height: 100%; width: 100%; }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Live Location Dashboard</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f2f2f2;
+    }
+    header {
+      background: #111;
+      color: #fff;
+      padding: 20px;
+      text-align: center;
+      font-size: 24px;
+      font-weight: bold;
+    }
+    .container {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      max-width: 400px;
+      margin: auto;
+    }
+    .user-card {
+      background: white;
+      padding: 15px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    .user-card:hover {
+      transform: scale(1.03);
+    }
+    .map {
+      width: 100%;
+      height: 350px;
+      border-radius: 12px;
+      margin-top: 20px;
+      display: none;
+    }
+    .back-btn {
+      margin-top: 15px;
+      padding: 10px 15px;
+      font-size: 16px;
+      border: none;
+      border-radius: 8px;
+      background: #222;
+      color: #fff;
+      display: none;
+      cursor: pointer;
+    }
+  </style>
 </head>
 <body>
-<div id="map"></div>
 
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<header>Live Location Dashboard</header>
 
-<!-- Leaflet -->
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<div class="container" id="home-screen">
+  <div class="user-card" onclick="openMap('user1')">User 1 Location →</div>
+  <div class="user-card" onclick="openMap('user2')">User 2 Location →</div>
+  <div class="user-card" onclick="openMap('user3')">User 3 Location →</div>
+</div>
+
+<button class="back-btn" id="backBtn" onclick="goBack()">← Back</button>
+<div id="map" class="map"></div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+<script src="https://maps.googleapis.com/maps/api/js?key=YOUR_MAPS_API_KEY"></script>
 
 <script>
-  // Firebase config
+  // FIREBASE CONFIG
   const firebaseConfig = {
     apiKey: "AIzaSyA5iHHWvOKZnKlZCZz57O8ALtSkfNdMmrE",
     authDomain: "live-tracker-554a7.firebaseapp.com",
@@ -32,38 +90,49 @@
     appId: "1:951695061306:web:a7b9478538f86f50a36003",
     measurementId: "G-V4LCZSEQLC"
   };
+
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
 
-  // Leaflet map
-  const map = L.map('map').setView([29.35, 76.49], 13);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap contributors'
-  }).addTo(map);
+  let map;
+  let marker;
 
-  // Object to hold markers for each user
-  const markers = {};
+  function openMap(user) {
+    document.getElementById("home-screen").style.display = "none";
+    document.getElementById("map").style.display = "block";
+    document.getElementById("backBtn").style.display = "block";
 
-  // Listen to all users
-  db.ref("users").on("value", snapshot => {
-    const users = snapshot.val();
-    if(users){
-      for(const uid in users){
-        const user = users[uid];
-        const lat = user.latitude;
-        const lng = user.longitude;
-        const name = user.name || uid;
+    db.ref(`locations/${user}`).on('value', snapshot => {
+      const data = snapshot.val();
+      if (!data) return;
 
-        if(markers[uid]){
-          // update existing marker
-          markers[uid].setLatLng([lat, lng]);
-        } else {
-          // create new marker
-          markers[uid] = L.marker([lat, lng]).addTo(map).bindPopup(name);
-        }
+      const pos = { lat: data.latitude, lng: data.longitude };
+
+      if (!map) {
+        map = new google.maps.Map(document.getElementById("map"), {
+          zoom: 15,
+          center: pos,
+        });
       }
-    }
-  });
+
+      if (marker) marker.setMap(null);
+
+      marker = new google.maps.Marker({
+        position: pos,
+        map: map,
+      });
+
+      map.setCenter(pos);
+    });
+  }
+
+  function goBack() {
+    document.getElementById("home-screen").style.display = "flex";
+    document.getElementById("map").style.display = "none";
+    document.getElementById("backBtn").style.display = "none";
+    map = null;
+  }
 </script>
+
 </body>
 </html>
